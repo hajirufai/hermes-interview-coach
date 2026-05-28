@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermes Interview Coach — Self-Improving Interview Prep Agent</title>
+    <meta name="description" content="An AI interview coach built on Hermes Agent that learns your weaknesses, adapts questions, and tracks your progress across sessions.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #0a0a0b;
+            --bg-secondary: #111113;
+            --bg-card: #16161a;
+            --border: #2a2a2e;
+            --text: #e4e4e7;
+            --text-muted: #71717a;
+            --text-dim: #52525b;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+            --orange: #f97316;
+            --cyan: #06b6d4;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ── Nav ─────────────────────────────────── */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+            background: rgba(10, 10, 11, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+        .logo {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo-icon {
+            font-size: 1.3rem;
+        }
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            list-style: none;
+        }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta {
+            background: var(--accent);
+            color: white !important;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .nav-cta:hover { opacity: 0.9; }
+
+        /* ── Hero ────────────────────────────────── */
+        .hero {
+            padding: 140px 0 80px;
+            text-align: center;
+            position: relative;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        h1 {
+            font-size: clamp(2.4rem, 5vw, 3.8rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        h1 .gradient {
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-sub {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 620px;
+            margin: 0 auto 36px;
+            line-height: 1.7;
+        }
+        .hero-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--text-dim); }
+
+        /* ── Terminal Demo ────────────────────────── */
+        .terminal-section {
+            padding: 40px 0 80px;
+        }
+        .terminal {
+            background: #0d0d0f;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .terminal-header {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .dot-red { background: #ff5f57; }
+        .dot-yellow { background: #febc2e; }
+        .dot-green { background: #28c840; }
+        .terminal-title {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-left: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .terminal-body {
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.8;
+            color: var(--text-muted);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .terminal-body .prompt {
+            color: var(--accent);
+        }
+        .terminal-body .cmd {
+            color: var(--text);
+        }
+        .terminal-body .comment {
+            color: var(--text-dim);
+        }
+        .terminal-body .success {
+            color: var(--green);
+        }
+        .terminal-body .warn {
+            color: var(--yellow);
+        }
+        .terminal-body .score-high { color: var(--green); }
+        .terminal-body .score-mid { color: var(--yellow); }
+        .terminal-body .score-low { color: var(--red); }
+        .terminal-body .heading {
+            color: var(--cyan);
+            font-weight: 600;
+        }
+
+        /* ── Features ────────────────────────────── */
+        .features {
+            padding: 80px 0;
+        }
+        .section-label {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+        .section-sub {
+            color: var(--text-muted);
+            margin-bottom: 48px;
+            max-width: 560px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            transition: border-color 0.3s;
+        }
+        .feature-card:hover {
+            border-color: var(--text-dim);
+        }
+        .feature-icon {
+            font-size: 1.6rem;
+            margin-bottom: 14px;
+        }
+        .feature-card h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* ── Architecture ────────────────────────── */
+        .architecture {
+            padding: 80px 0;
+        }
+        .arch-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .arch-table th {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .arch-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .arch-table td:first-child {
+            color: var(--cyan);
+            font-weight: 500;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+        .arch-table tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        /* ── Rubric ──────────────────────────────── */
+        .rubric {
+            padding: 80px 0;
+        }
+        .rubric-bars {
+            max-width: 600px;
+        }
+        .rubric-item {
+            margin-bottom: 20px;
+        }
+        .rubric-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        .rubric-item-label {
+            font-weight: 600;
+        }
+        .rubric-item-weight {
+            color: var(--text-muted);
+        }
+        .rubric-bar-track {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .rubric-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+
+        /* ── CTA ─────────────────────────────────── */
+        .cta {
+            padding: 80px 0 120px;
+            text-align: center;
+        }
+        .cta-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 56px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 200px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .cta h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .cta p {
+            color: var(--text-muted);
+            margin-bottom: 28px;
+            position: relative;
+        }
+        .install-cmd {
+            background: #0d0d0f;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            display: inline-block;
+            margin-bottom: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+        .install-cmd:hover { border-color: var(--accent); }
+
+        /* ── Footer ──────────────────────────────── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 32px 0;
+        }
+        footer .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        footer p {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+        footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+        footer a:hover { color: var(--text); }
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        /* ── Responsive ──────────────────────────── */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .feature-grid { grid-template-columns: 1fr; }
+            footer .container { flex-direction: column; gap: 16px; }
+            .terminal-body { font-size: 0.72rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+    <div class="container">
+        <a href="#" class="logo">
+            <span class="logo-icon">☤</span>
+            <span>Hermes Interview Coach</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#demo">Demo</a></li>
+            <li><a href="#architecture">How It Works</a></li>
+            <li><a href="https://github.com/hajirufai/hermes-interview-coach" class="nav-cta">GitHub →</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="container">
+        <div class="badge">
+            <span class="badge-dot"></span>
+            Built on Hermes Agent · DEV Challenge Entry
+        </div>
+        <h1>
+            Interview prep that<br>
+            <span class="gradient">actually learns.</span>
+        </h1>
+        <p class="hero-sub">
+            An AI interview coach that remembers your weak spots, adapts questions to challenge you, 
+            and tracks your progress across sessions. Powered by Hermes Agent's learning loop.
+        </p>
+        <div class="hero-buttons">
+            <a href="https://github.com/hajirufai/hermes-interview-coach" class="btn btn-primary">Get Started →</a>
+            <a href="#demo" class="btn btn-secondary">See It In Action</a>
+        </div>
+    </div>
+</section>
+
+<!-- Terminal Demo -->
+<section class="terminal-section" id="demo">
+    <div class="container">
+        <div class="terminal">
+            <div class="terminal-header">
+                <span class="terminal-dot dot-red"></span>
+                <span class="terminal-dot dot-yellow"></span>
+                <span class="terminal-dot dot-green"></span>
+                <span class="terminal-title">hermes — interview-coach</span>
+            </div>
+            <div class="terminal-body" id="terminal-content">
+                <div><span class="prompt">hermes&gt;</span> <span class="cmd">I want to practice for a Google backend interview</span></div>
+                <br>
+                <div><span class="heading">## Mock Interview Session #12</span></div>
+                <br>
+                <div><span class="comment">Type: Behavioral targeting Google</span></div>
+                <div><span class="comment">Questions: 5 · Duration: ~30 min</span></div>
+                <div><span class="comment">Difficulty: Hard (auto-scaled from your history)</span></div>
+                <br>
+                <div>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+                <br>
+                <div><span class="heading">Question 1/5 — Behavioral (Leadership)</span></div>
+                <br>
+                <div>Tell me about a time you had to lead a project</div>
+                <div>with unclear requirements.</div>
+                <br>
+                <div><span class="prompt">you&gt;</span> <span class="cmd">At my previous company, we had a client request</span></div>
+                <div><span class="cmd">for a "real-time analytics dashboard" with no spec.</span></div>
+                <div><span class="cmd">The PM had left, so I stepped up. First, I scheduled</span></div>
+                <div><span class="cmd">3 stakeholder interviews to extract requirements —</span></div>
+                <div><span class="cmd">turns out "real-time" meant "within 5 minutes" not</span></div>
+                <div><span class="cmd">milliseconds. I wrote a one-page proposal with two</span></div>
+                <div><span class="cmd">options, got sign-off in a day, and led a 3-person</span></div>
+                <div><span class="cmd">team to ship in 2 weeks. Reduced manual reporting</span></div>
+                <div><span class="cmd">from 4 hours/day to zero.</span></div>
+                <br>
+                <div><span class="heading">Evaluation</span> <span class="score-high">🟢 8.2/10</span></div>
+                <br>
+                <div><span class="score-high">Clarity     9/10 ████████░░</span> <span class="comment">Clear STAR structure</span></div>
+                <div><span class="score-mid">Depth       7/10 ███████░░░</span> <span class="comment">Could explore trade-offs deeper</span></div>
+                <div><span class="score-high">Relevance   9/10 ████████░░</span> <span class="comment">Directly addresses the question</span></div>
+                <div><span class="score-high">Examples    9/10 ████████░░</span> <span class="comment">Strong metrics: 4hrs → 0</span></div>
+                <div><span class="score-mid">Growth      7/10 ███████░░░</span> <span class="comment">Add what you learned</span></div>
+                <br>
+                <div><span class="success">✅ Strong STAR structure with concrete metrics</span></div>
+                <div><span class="warn">🎯 Add a reflection — Google values "Learn and Be Curious"</span></div>
+                <br>
+                <div><span class="comment">Profile updated · Weak areas recalculated</span></div>
+                <div><span class="comment">Next question weighted toward: concurrency, conflict</span></div>
+                <br>
+                <div>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+                <br>
+                <div><span class="heading">Question 2/5 — System Design</span></div>
+                <br>
+                <div>Design a rate limiter for an API gateway.</div>
+                <div><span class="comment">Key areas: token bucket, sliding window, Redis,</span></div>
+                <div><span class="comment">distributed state, consistency</span></div>
+                <div><span class="comment">Suggested time: 30 minutes</span></div>
+                <br>
+                <div><span class="prompt">you&gt;</span> <span class="text-dim">|</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+    <div class="container">
+        <p class="section-label">Capabilities</p>
+        <h2 class="section-title">Not just another chatbot quiz.</h2>
+        <p class="section-sub">
+            Built on Hermes Agent's unique architecture — the learning loop, persistent memory, and multi-platform delivery make this fundamentally different from static question banks.
+        </p>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🧠</div>
+                <h3>Learning Loop</h3>
+                <p>Your interview profile persists across sessions. Questions adapt to target your weak areas. Difficulty auto-scales as you improve. The skill literally gets better at coaching you over time.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Scored Feedback</h3>
+                <p>Every answer evaluated across 5 dimensions with company-specific rubrics. Amazon Leadership Principles, Google Googleyness, Stripe Rigor — each adds relevant scoring criteria.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h3>Company Research</h3>
+                <p>Set a target company and get real-time interview intel via web search — common questions, process stages, culture signals, red flags. Research caches locally for instant access.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⏰</div>
+                <h3>Daily Practice</h3>
+                <p>Cron-scheduled daily challenges via Telegram, Discord, Slack, or WhatsApp. One question each morning, weighted toward your weaknesses. Reply and get instant feedback.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Progress Tracking</h3>
+                <p>Visual progress reports with score trends, category breakdowns, and actionable recommendations. Weekly digests. Interview readiness assessment against company-specific bars.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌍</div>
+                <h3>Works Everywhere</h3>
+                <p>Practice from CLI, Telegram, Discord, Slack, or WhatsApp — your progress follows you. Start a session on your laptop, continue on your phone during commute.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Architecture -->
+<section class="architecture" id="architecture">
+    <div class="container">
+        <p class="section-label">Architecture</p>
+        <h2 class="section-title">How it uses Hermes Agent</h2>
+        <p class="section-sub">
+            Every major Hermes capability is doing real work — this isn't a wrapper around a prompt.
+        </p>
+        <table class="arch-table">
+            <thead>
+                <tr>
+                    <th>Hermes Feature</th>
+                    <th>How Interview Coach Uses It</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Learning Loop</td>
+                    <td>Profile updates after every session; question selection adapts to target weak areas; difficulty scales automatically</td>
+                </tr>
+                <tr>
+                    <td>Persistent Memory</td>
+                    <td>Interview profile, session logs, and company research survive restarts, model switches, and platform changes</td>
+                </tr>
+                <tr>
+                    <td>Tool Use</td>
+                    <td>Web search for company research; file I/O for progress tracking; code execution for technical evaluation</td>
+                </tr>
+                <tr>
+                    <td>Cron Scheduling</td>
+                    <td>Daily practice questions delivered on any connected platform — weekday mornings, configurable</td>
+                </tr>
+                <tr>
+                    <td>Multi-Platform</td>
+                    <td>Practice from Telegram, Discord, Slack, WhatsApp, or CLI — one profile across all</td>
+                </tr>
+                <tr>
+                    <td>Skills System</td>
+                    <td>Self-contained skill with auto-improving question banks; compatible with agentskills.io</td>
+                </tr>
+                <tr>
+                    <td>User Modeling</td>
+                    <td>Tracks strengths, weaknesses, target companies, preferred difficulty, and learning trajectory</td>
+                </tr>
+                <tr>
+                    <td>Subagent Delegation</td>
+                    <td>Parallel company research while conducting interviews; batch evaluation for session summaries</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- Rubric -->
+<section class="rubric" id="rubric">
+    <div class="container">
+        <p class="section-label">Evaluation</p>
+        <h2 class="section-title">How your answers are scored</h2>
+        <p class="section-sub">
+            Five dimensions, weighted and calibrated. Company-specific rubrics add extra criteria.
+        </p>
+        <div class="rubric-bars">
+            <div class="rubric-item">
+                <div class="rubric-item-header">
+                    <span class="rubric-item-label">Depth</span>
+                    <span class="rubric-item-weight">25%</span>
+                </div>
+                <div class="rubric-bar-track">
+                    <div class="rubric-bar-fill" style="width: 25%; background: var(--accent);"></div>
+                </div>
+            </div>
+            <div class="rubric-item">
+                <div class="rubric-item-header">
+                    <span class="rubric-item-label">Clarity</span>
+                    <span class="rubric-item-weight">20%</span>
+                </div>
+                <div class="rubric-bar-track">
+                    <div class="rubric-bar-fill" style="width: 20%; background: var(--cyan);"></div>
+                </div>
+            </div>
+            <div class="rubric-item">
+                <div class="rubric-item-header">
+                    <span class="rubric-item-label">Relevance</span>
+                    <span class="rubric-item-weight">20%</span>
+                </div>
+                <div class="rubric-bar-track">
+                    <div class="rubric-bar-fill" style="width: 20%; background: var(--green);"></div>
+                </div>
+            </div>
+            <div class="rubric-item">
+                <div class="rubric-item-header">
+                    <span class="rubric-item-label">Examples</span>
+                    <span class="rubric-item-weight">20%</span>
+                </div>
+                <div class="rubric-bar-track">
+                    <div class="rubric-bar-fill" style="width: 20%; background: var(--yellow);"></div>
+                </div>
+            </div>
+            <div class="rubric-item">
+                <div class="rubric-item-header">
+                    <span class="rubric-item-label">Growth Signal</span>
+                    <span class="rubric-item-weight">15%</span>
+                </div>
+                <div class="rubric-bar-track">
+                    <div class="rubric-bar-fill" style="width: 15%; background: var(--orange);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+    <div class="container">
+        <div class="cta-box">
+            <h2>Start practicing in 30 seconds.</h2>
+            <p>Install the skill, tell Hermes you want to practice, and go.</p>
+            <div class="install-cmd" onclick="navigator.clipboard.writeText('git clone https://github.com/hajirufai/hermes-interview-coach.git ~/.hermes/skills/interview-coach')">
+                git clone https://github.com/hajirufai/hermes-interview-coach.git ~/.hermes/skills/interview-coach
+            </div>
+            <br><br>
+            <div class="hero-buttons">
+                <a href="https://github.com/hajirufai/hermes-interview-coach" class="btn btn-primary">View on GitHub →</a>
+                <a href="https://github.com/NousResearch/hermes-agent" class="btn btn-secondary">Get Hermes Agent</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p>Built by <a href="https://github.com/hajirufai">Haji Rufai</a> for the <a href="https://dev.to/challenges/hermes-agent-2026-05-15">Hermes Agent Challenge</a></p>
+        <div class="footer-links">
+            <a href="https://github.com/hajirufai/hermes-interview-coach">GitHub</a>
+            <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>
+            <a href="https://dev.to/hajirufai">DEV.to</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    // Animate rubric bars on scroll
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.querySelectorAll('.rubric-bar-fill').forEach(bar => {
+                    const width = bar.style.width;
+                    bar.style.width = '0%';
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            bar.style.width = width;
+                        });
+                    });
+                });
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('.rubric-bars').forEach(el => observer.observe(el));
+
+    // Terminal typing effect for cursor
+    const cursor = document.querySelector('.text-dim');
+    if (cursor) {
+        setInterval(() => {
+            cursor.style.opacity = cursor.style.opacity === '0' ? '1' : '0';
+        }, 530);
+    }
+</script>
+
+</body>
+</html>
